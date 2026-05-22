@@ -59,6 +59,8 @@ public:
     bool init(double nearPlane, double farPlane);
     void close();
     void update();
+    void setTrackingSpace(vr::ETrackingUniverseOrigin trackingSpace);
+    void setDesiredInitialHMDPose(const cTransform& desiredWorldHMDPose);
     void submitTextures(GLuint leftTextureID, GLuint rightTextureID);
     void submitTextureWithDepth(vr::Hmd_Eye nEye, GLuint imageTextureId, GLuint depthTextureId, cTransform& projection);
     void getRecommendedTextureSize(unsigned int& width, unsigned int& height);
@@ -80,6 +82,12 @@ protected:
 
     cTransform m_ovrToAMBFOffset;
     cTransform m_ovrToAMBFOffsetInv;
+
+    vr::ETrackingUniverseOrigin m_trackingSpace = vr::TrackingUniverseStanding;
+    cTransform m_desiredWorldHMDPose;
+    cTransform m_worldOriginOffset;
+    bool m_hasDesiredInitialPose = false;
+    bool m_initialPoseCalibrated = false;
 
     double m_near;
     double m_far;

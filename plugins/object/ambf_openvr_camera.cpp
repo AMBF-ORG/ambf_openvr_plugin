@@ -56,6 +56,19 @@ int afOpenVRCamera::init(const afBaseObjectPtr a_afObjectPtr, const afBaseObject
     m_camera = (afCameraPtr)a_afObjectPtr;
     m_ovrIfc = new OpenVRInterface();
 
+    // Capture the camera pose loaded from ADF and use it as the desired initial HMD world pose.
+    m_ovrIfc->setDesiredInitialHMDPose(m_camera->getLocalTransform());
+
+    // Default to seated tracking for simulator usage. Set AMBF_OPENVR_TRACKING_SPACE=standing
+    // to use room-scale standing origin instead.
+    const char* trackingSpaceEnv = std::getenv("AMBF_OPENVR_TRACKING_SPACE");
+    if (trackingSpaceEnv && std::string(trackingSpaceEnv) == "standing"){
+        m_ovrIfc->setTrackingSpace(vr::TrackingUniverseStanding);
+    }
+    else{
+        m_ovrIfc->setTrackingSpace(vr::TrackingUniverseSeated);
+    }
+
     if (!m_ovrIfc->init(m_camera->getInternalCamera()->getNearClippingPlane(), m_camera->getInternalCamera()->getFarClippingPlane())){
         m_ovrIfc->close();
         return -1;
@@ -130,6 +143,14 @@ bool OpenVRInterface::init(double nearPlane, double farPlane){
         return false;
     }
 
+    m_vrCompositor->SetTrackingSpace(m_trackingSpace);
+    if (m_trackingSpace == vr::TrackingUniverseSeated){
+        vr::IVRChaperone* chaperone = vr::VRChaperone();
+        if (chaperone){
+            chaperone->ResetZeroPose(vr::TrackingUniverseSeated);
+        }
+    }
+
     unsigned int rWidth, rHeight;
     m_vrSystem->GetRecommendedRenderTargetSize(&rWidth, &rHeight);
 
@@ -144,6 +165,16 @@ bool OpenVRInterface::init(double nearPlane, double farPlane){
     m_far = farPlane;
 
     return true;
+}
+
+void OpenVRInterface::setTrackingSpace(vr::ETrackingUniverseOrigin trackingSpace){
+    m_trackingSpace = trackingSpace;
+}
+
+void OpenVRInterface::setDesiredInitialHMDPose(const cTransform& desiredWorldHMDPose){
+    m_desiredWorldHMDPose = desiredWorldHMDPose;
+    m_hasDesiredInitialPose = true;
+    m_initialPoseCalibrated = false;
 }
 
 void OpenVRInterface::close(){
@@ -190,6 +221,17 @@ cTransform OpenVRInterface::getHMDPose(){
         vr::HmdMatrix34_t pose = m_trackedDevicePoses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking;
         vrMatrix_to_cTransform(pose, trans);
         trans = m_ovrToAMBFOffsetInv * trans * m_ovrToAMBFOffset;
+
+        if (m_hasDesiredInitialPose && !m_initialPoseCalibrated){
+            cTransform transInv = trans;
+            transInv.invert();
+            m_worldOriginOffset = m_desiredWorldHMDPose * transInv;
+            m_initialPoseCalibrated = true;
+        }
+
+        if (m_initialPoseCalibrated){
+            trans = m_worldOriginOffset * trans;
+        }
     }
     return trans;
 }
