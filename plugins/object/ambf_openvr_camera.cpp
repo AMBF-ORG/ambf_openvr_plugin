@@ -62,7 +62,10 @@ int afOpenVRCamera::init(const afBaseObjectPtr a_afObjectPtr, const afBaseObject
     }
 
     unsigned int rWidth, rHeight;
+    float textureScaleFactor = 1.0;
     m_ovrIfc->getRecommendedTextureSize(rWidth, rHeight);
+    rWidth *= textureScaleFactor;
+    rHeight *= textureScaleFactor;
 
     m_eyeRendererLeft = new EyeRenderer();
     m_eyeRendererLeft->init(m_camera, rWidth, rHeight);
@@ -83,7 +86,9 @@ void afOpenVRCamera::graphicsUpdate(){
     cTransform T_hmd = m_ovrIfc->getHMDPose();
 //    cerr << "INFO! HMD Position " << T_hmd.getLocalPos().str() << endl;
     m_eyeRendererLeft->render(T_hmd);
+    // m_ovrIfc->submitTextureWithDepth(vr::Eye_Left, m_eyeRendererLeft->getTextureId(), m_eyeRendererLeft->getDepthTextureId(), m_eyeRendererLeft->m_projectionMatrix);
     m_eyeRendererRight->render(T_hmd);
+    // m_ovrIfc->submitTextureWithDepth(vr::Eye_Right, m_eyeRendererRight->getTextureId(), m_eyeRendererRight->getDepthTextureId(), m_eyeRendererRight->m_projectionMatrix);
     m_ovrIfc->submitTextures(m_eyeRendererLeft->getTextureId(), m_eyeRendererRight->getTextureId());
     m_camera->getInternalCamera()->m_projectionMatrix = backupProjection;
 }
@@ -162,6 +167,18 @@ void OpenVRInterface::submitTextures(GLuint leftTextureID, GLuint rightTextureID
     m_vrCompositor->Submit(vr::Eye_Right, &rightEyeTexture);
 }
 
+void OpenVRInterface::submitTextureWithDepth(vr::Hmd_Eye nEye, GLuint imageTextureId, GLuint depthTextureId, cTransform& projection){
+    vr::VRTextureWithDepth_t vrTexture;
+    vrTexture.handle = (void*)(uintptr_t)imageTextureId;
+    vrTexture.eType = vr::TextureType_OpenGL;
+    vrTexture.eColorSpace = vr::ColorSpace_Gamma;
+    vrTexture.depth.handle = (void*)(uintptr_t)depthTextureId;
+    cTransform_to_vrMatrix(projection, vrTexture.depth.mProjection);
+    vrTexture.depth.vRange.v[0] = 0.0;
+    vrTexture.depth.vRange.v[1] = 1.0;
+    m_vrCompositor->Submit(nEye, &vrTexture, 0, vr::EVRSubmitFlags::Submit_TextureWithDepth);
+}
+
 void OpenVRInterface::getRecommendedTextureSize(unsigned int &width, unsigned int &height){
     m_vrSystem->GetRecommendedRenderTargetSize(&width, &height);
 }
@@ -222,6 +239,13 @@ void OpenVRInterface::vrMatrix_to_cTransform(vr::HmdMatrix44_t& hmdMat, cTransfo
               hmdMat.m[0][3], hmdMat.m[1][3], hmdMat.m[2][3], hmdMat.m[3][3]);
 }
 
+void OpenVRInterface::cTransform_to_vrMatrix(cTransform &trans, vr::HmdMatrix44_t &hmdMat){
+    hmdMat.m[0][0] = trans(0,0); hmdMat.m[0][1] = trans(0,1); hmdMat.m[0][2] = trans(0,2); hmdMat.m[0][3] = trans(0,3);
+    hmdMat.m[1][0] = trans(1,0); hmdMat.m[1][1] = trans(1,1); hmdMat.m[1][2] = trans(1,2); hmdMat.m[1][3] = trans(1,3);
+    hmdMat.m[2][0] = trans(2,0); hmdMat.m[2][1] = trans(2,1); hmdMat.m[2][2] = trans(2,2); hmdMat.m[2][3] = trans(2,3);
+    hmdMat.m[3][0] = trans(3,0); hmdMat.m[3][1] = trans(3,1); hmdMat.m[3][2] = trans(3,2); hmdMat.m[3][3] = trans(3,3);
+}
+
 void EyeRenderer::init(const afCameraPtr cam, double width, double height){
     m_width = width;
     m_height = height;
@@ -240,7 +264,7 @@ void EyeRenderer::render(cTransform& viewMat){
 //    cTransform curTranform = m_camera->getLocalTransform();
 
     m_camera->getInternalCamera()->m_useCustomProjectionMatrix = true;
-    m_camera->getInternalCamera()->m_projectionMatrix = m_projectMatrix;
+    m_camera->getInternalCamera()->m_projectionMatrix = m_projectionMatrix;
 
     m_camera->setLocalTransform(viewMat * m_T_eye_hmd);
     m_frameBuffer->renderView();
@@ -254,8 +278,12 @@ GLuint EyeRenderer::getTextureId(){
     return m_frameBuffer->m_imageBuffer->getTextureId();
 }
 
+GLuint EyeRenderer::getDepthTextureId(){
+    return m_frameBuffer->m_depthBuffer->getTextureId();
+}
+
 void EyeRenderer::setProjectionMatrix(cTransform proj){
-    m_projectMatrix = proj;
+    m_projectionMatrix = proj;
 }
 
 void EyeRenderer::setEyeInHMDTransform(cTransform trans){

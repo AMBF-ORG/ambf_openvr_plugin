@@ -60,6 +60,7 @@ public:
     void close();
     void update();
     void submitTextures(GLuint leftTextureID, GLuint rightTextureID);
+    void submitTextureWithDepth(vr::Hmd_Eye nEye, GLuint imageTextureId, GLuint depthTextureId, cTransform& projection);
     void getRecommendedTextureSize(unsigned int& width, unsigned int& height);
 
     cTransform getHMDPose();
@@ -74,6 +75,8 @@ protected:
     void vrMatrix_to_cTransform(vr::HmdMatrix33_t& hmdMat, cTransform& trans);
     void vrMatrix_to_cTransform(vr::HmdMatrix34_t& hmdMat, cTransform& trans);
     void vrMatrix_to_cTransform(vr::HmdMatrix44_t& hmdMat, cTransform& trans);
+
+    void cTransform_to_vrMatrix(cTransform& trans, vr::HmdMatrix44_t& hmdMat);
 
     cTransform m_ovrToAMBFOffset;
     cTransform m_ovrToAMBFOffsetInv;
@@ -93,13 +96,15 @@ public:
     void close();
 
     void render(cTransform& viewMat);
-    unsigned int getTextureId();
+    GLuint getTextureId();
+    GLuint getDepthTextureId();
     void setProjectionMatrix(cTransform proj);
     void setEyeInHMDTransform(cTransform trans);
 
+    cTransform m_projectionMatrix;
+
 protected:
     cFrameBufferPtr m_frameBuffer;
-    cTransform m_projectMatrix;
     cTransform m_T_eye_hmd;
     int m_width;
     int m_height;
