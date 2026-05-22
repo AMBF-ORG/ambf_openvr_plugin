@@ -44,6 +44,8 @@ set(CMAKE_CXX_STANDARD 11)
 
 find_package(AMBF)
 find_package(Boost COMPONENTS program_options filesystem)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(OPENVR REQUIRED openvr)
 
 include_directories(${AMBF_INCLUDE_DIRS})
 
@@ -51,15 +53,10 @@ link_directories(${AMBF_LIBRARY_DIRS})
 
 add_definitions(${AMBF_DEFINITIONS})
 
-add_subdirectory(/home/laminectomy/openvr bin)
+include_directories(${OPENVR_INCLUDE_DIRS})
+link_directories(${OPENVR_LIBRARY_DIRS})
 
-set(OVR_HEADER_DIR
-  ${OpenVRSDK_SOURCE_DIR}/headers
-)
-
-include_directories(${OVR_HEADER_DIR})
-
-set(OVR_LIBS ${OpenVRSDK_SOURCE_DIR}/bin/linux64/libopenvr_api.so)
+set(OVR_LIBS ${OPENVR_LIBRARIES})
 
 add_library(${CMAKE_PROJECT_NAME} SHARED plugins/object/${CMAKE_PROJECT_NAME}.cpp plugins/object/${CMAKE_PROJECT_NAME}.h)
 target_link_libraries (${CMAKE_PROJECT_NAME} ${AMBF_LIBRARIES} ${OVR_LIBS})

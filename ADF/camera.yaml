@@ -8,12 +8,12 @@ namespace: /ambf/env/
 openvr_cam:
   namespace: cameras/
   name: openvr_cam
-  location: {x: 1., y: 0.0, z: 0.5} # This is overriden in the plugin via OpenVR
-  look at: {x: 0.0, y: 0.0, z: -0.5} # This is overriden in the plugin via OpenVR
-  up: {x: 0.0, y: 0.0, z: 1.0} # This is overriden in the plugin via OpenVR
-  clipping plane: {near: 0.01, far: 100} # This is overriden in the plugin via OpenVR
-  field view angle: 0.7
-  monitor: 0
+  location: {x: 0., y: 0.0, z: 0.0}
+  look at: {x: -1.0, y: 0.0, z: 0.0}
+  up: {x: 0.0, y: 0.0, z: 1.0}
+  clipping plane: {near: 0.01, far: 100}
+  field view angle: 0.7 # This is overriden by the plugin
+  monitor: 0 # Not relevant for the plugin
   plugins: [
     {
       name: openvr_plugin,
@@ -28,7 +28,7 @@ openvr_cam:
   #   path: ../../../ambf_shaders/preprocessing/
   #   vertex: shader.vs
   #   fragment: shader.fs
-  # publish image interval: 5   # Publish every nth scene update
+  # publish image interval: 5   # Publizsh every nth scene update
   # publish depth: true
   # publish depth noise: {mean: 0.1, std_dev: 0.01, bias: 0.0}
   # publish depth interval: 1 # Publish every nth scene update
